@@ -11,52 +11,53 @@ using Tools.DotNETCommon;
 
 public class MqttUtilities : ModuleRules
 {
-	public MqttUtilities(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+    public MqttUtilities(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicIncludePaths.AddRange(
-			new string[] {
+        PublicIncludePaths.AddRange(
+            new string[] {
                 Path.Combine (ModuleDirectory, "Public")
 				// ... add public include paths required here ...
 			}
-			);
+            );
 
 
-		PrivateIncludePaths.AddRange(
-			new string[] {
+        PrivateIncludePaths.AddRange(
+            new string[] {
                 Path.Combine (ModuleDirectory, "Private")
 				// ... add other private include paths required here ...
 			}
-			);
+            );
 
 
-		PublicDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"Core",
+        PublicDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "Core",
+                "OpenSSL", // Must be included for Linux
 				// ... add other public dependencies that you statically link with here ...
 			}
-			);
+            );
 
 
-		PrivateDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"CoreUObject",
-				"Engine",
+        PrivateDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "CoreUObject",
+                "Engine",
                 "Projects",
                 // ... add private dependencies that you statically link with here ...
 			}
-			);
+            );
 
 
-		DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
+        DynamicallyLoadedModuleNames.AddRange(
+            new string[]
+            {
 				// ... add any modules that your module loads dynamically here ...
 			}
-			);
+            );
 
 
         // Additional routine for Windows
@@ -83,17 +84,17 @@ public class MqttUtilities : ModuleRules
             PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private/IOS"));
 
             PublicAdditionalFrameworks.Add(new Framework("MQTTClient", "../ThirdParty/IOS/MQTTClient.embeddedframework.zip"));
-			PublicAdditionalFrameworks.Add(new Framework("SocketRocket", "../ThirdParty/IOS/SocketRocket.embeddedframework.zip"));
+            PublicAdditionalFrameworks.Add(new Framework("SocketRocket", "../ThirdParty/IOS/SocketRocket.embeddedframework.zip"));
 
-			PublicAdditionalLibraries.Add("/usr/lib/libicucore.dylib");
+            PublicAdditionalLibraries.Add("/usr/lib/libicucore.dylib");
 
             PublicFrameworks.AddRange(
                 new string[]
                 {
-					"Foundation",
-					"Security",
+                    "Foundation",
+                    "Security",
                     "CFNetwork",
-					"CoreData"
+                    "CoreData"
                 }
             );
 
@@ -114,7 +115,7 @@ public class MqttUtilities : ModuleRules
             AdditionalPropertiesForReceipt.Add("AndroidPlugin", Path.Combine(PluginPath, "MqttUtilities_Android_UPL.xml"));
         }
 
-        // Additional routine for Windows
+        // Additional routine for Linux
         if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private/Linux"));
@@ -122,25 +123,25 @@ public class MqttUtilities : ModuleRules
             LoadThirdPartyLibrary("libmosquitto", Target);
             LoadThirdPartyLibrary("libmosquittopp", Target);
         }
-  	}
+    }
 
     public void LoadThirdPartyLibrary(string libname, ReadOnlyTargetRules Target)
     {
         string StaticLibExtension = ".lib";
         string DynamicLibExtension = string.Empty;
 
-        if(Target.Platform == UnrealTargetPlatform.Win64)
+        if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             DynamicLibExtension = ".dll";
         }
-        if(Target.Platform == UnrealTargetPlatform.Mac)
+        if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             DynamicLibExtension = ".dylib";
         }
-        if(Target.Platform == UnrealTargetPlatform.Linux)
+        if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             DynamicLibExtension = ".so";
-						StaticLibExtension = "_static.a";
+            StaticLibExtension = "_static.a";
         }
 
         string ThirdPartyPath = Path.Combine(ModuleDirectory, "../ThirdParty", Target.Platform.ToString());
@@ -150,7 +151,7 @@ public class MqttUtilities : ModuleRules
 
         // Link static library (Windows only)
 
-        if(Target.Platform == UnrealTargetPlatform.Win64 || Target.Platform == UnrealTargetPlatform.Linux)
+        if (Target.Platform == UnrealTargetPlatform.Win64 || Target.Platform == UnrealTargetPlatform.Linux)
         {
             PublicAdditionalLibraries.Add(Path.Combine(LibrariesPath, libname + StaticLibExtension));
         }

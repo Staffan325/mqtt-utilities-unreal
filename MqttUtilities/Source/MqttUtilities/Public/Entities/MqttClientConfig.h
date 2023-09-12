@@ -9,7 +9,7 @@ struct MQTTUTILITIES_API FMqttClientConfig
 {
 	GENERATED_BODY()
 
-    /** Host URL. */
+	/** Host URL. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MQTT")
 	FString HostUrl;
 
@@ -17,11 +17,11 @@ struct MQTTUTILITIES_API FMqttClientConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MQTT")
 	int Port;
 
-    /** Unique client identifier. */
+	/** Unique client identifier. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MQTT")
 	FString ClientId;
 
-    /** Maximum time between two pusblish/subscribe tasks executions expressed in miliseconds. */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MQTT")
-    int EventLoopDeltaMs{-1};
+	/** Maximum time between two pusblish/subscribe tasks executions expressed in miliseconds. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MQTT")
+	int EventLoopDeltaMs{-1};
 };

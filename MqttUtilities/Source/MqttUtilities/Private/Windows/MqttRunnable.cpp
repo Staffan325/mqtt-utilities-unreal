@@ -57,6 +57,24 @@ uint32 FMqttRunnable::Run()
 		connection.username_pw_set(Username.c_str(), Password.c_str());
 	}
 	
+	if (!CaFile.empty() || !CaPath.empty())
+	{
+		UE_LOG(LogTemp, Log, TEXT("MQTT => Using TLS"));
+		UE_LOG(LogTemp, Log, TEXT("MQTT => CA file: %s"), ANSI_TO_TCHAR(CaFile.c_str()));
+		// TODO: Implement pw_callback
+		int tlsStatus = connection.tls_set(
+				CaFile.empty() ? NULL : CaFile.c_str(),
+				CaPath.empty() ? NULL : CaPath.c_str(),
+				CertFile.empty() ? NULL : CertFile.c_str(),
+				KeyFile.empty() ? NULL : KeyFile.c_str(),
+				NULL);
+		if (tlsStatus != MOSQ_ERR_SUCCESS)
+		{
+			UE_LOG(LogTemp, Error, TEXT("MQTT => TLS error: %d %s"), tlsStatus, ANSI_TO_TCHAR(mosquitto_strerror(tlsStatus)));
+			OnError(tlsStatus, FString(ANSI_TO_TCHAR(mosquitto_strerror(tlsStatus))));
+		}
+	}
+
 	returnCode = connection.connect(Host.c_str(), Port, 10);
 
 	if (returnCode != 0) 

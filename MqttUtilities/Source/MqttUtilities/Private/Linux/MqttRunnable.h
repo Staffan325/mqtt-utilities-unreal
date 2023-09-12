@@ -19,7 +19,7 @@ public:
 
 	FMqttRunnable(UMqttClient* mqttClient);
 	virtual ~FMqttRunnable();
-	
+
 	bool Init() override;
 	uint32 Run() override;
 	void Stop() override;
@@ -46,7 +46,11 @@ public:
 	std::string ClientId;
 	std::string Username;
 	std::string Password;
-	
+	std::string CaFile;
+	std::string CaPath;
+	std::string CertFile;
+	std::string KeyFile;
+
 	int32 Port;
 
 	void OnConnect();
