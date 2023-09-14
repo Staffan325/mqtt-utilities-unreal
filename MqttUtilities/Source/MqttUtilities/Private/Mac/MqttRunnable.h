@@ -16,10 +16,9 @@ class UMqttClient;
 class FMqttRunnable : public FRunnable
 {
 public:
-
-	FMqttRunnable(UMqttClient* mqttClient, int updateDeltaMs = -1);
+	FMqttRunnable(UMqttClient *mqttClient, int updateDeltaMs = -1);
 	virtual ~FMqttRunnable();
-	
+
 	bool Init() override;
 	uint32 Run() override;
 	void Stop() override;
@@ -31,24 +30,26 @@ public:
 	bool IsAlive() const;
 
 private:
-	
 	bool bKeepRunning;
 
 	int iUpdateDeltaMs;
 
-	std::queue<FMqttTaskPtr>* TaskQueue;
+	std::queue<FMqttTaskPtr> *TaskQueue;
 
-	FCriticalSection* TaskQueueLock;
+	FCriticalSection *TaskQueueLock;
 
-	UMqttClient* client;
+	UMqttClient *client;
 
 public:
-
 	std::string Host;
 	std::string ClientId;
 	std::string Username;
 	std::string Password;
-	
+	std::string CaFile;
+	std::string CaPath;
+	std::string CertFile;
+	std::string KeyFile;
+
 	int32 Port;
 
 	void OnConnect();

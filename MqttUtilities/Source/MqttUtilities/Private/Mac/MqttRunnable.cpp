@@ -7,22 +7,18 @@
 
 #include "Async/Async.h"
 
-FMqttRunnable::FMqttRunnable(UMqttClient* mqttClient, int updateDeltaMs) : FRunnable()
-	,iUpdateDeltaMs(updateDeltaMs)
-	,TaskQueue(new std::queue<FMqttTaskPtr>())
-	,TaskQueueLock(new FCriticalSection())
-	,client(mqttClient)
+FMqttRunnable::FMqttRunnable(UMqttClient *mqttClient, int updateDeltaMs) : FRunnable(), iUpdateDeltaMs(updateDeltaMs), TaskQueue(new std::queue<FMqttTaskPtr>()), TaskQueueLock(new FCriticalSection()), client(mqttClient)
 {
 }
 
 FMqttRunnable::~FMqttRunnable()
-{	
+{
 	if (TaskQueueLock != nullptr)
 	{
 		delete TaskQueueLock;
 		TaskQueueLock = nullptr;
 	}
-	
+
 	if (TaskQueue != nullptr)
 	{
 		delete TaskQueue;
@@ -46,27 +42,45 @@ uint32 FMqttRunnable::Run()
 	mosqpp::lib_init();
 
 	MqttClientImpl connection(ClientId.c_str());
-	
+
 	connection.max_inflight_messages_set(0);
 	connection.Task = this;
 
 	int returnCode = 0;
-	
-	if (!Username.empty()) 
+
+	if (!Username.empty())
 	{
 		connection.username_pw_set(Username.c_str(), Password.c_str());
 	}
-	
+
+	if (!CaFile.empty() || !CaPath.empty())
+	{
+		UE_LOG(LogTemp, Log, TEXT("MQTT => Using TLS"));
+		UE_LOG(LogTemp, Log, TEXT("MQTT => CA file: %s"), ANSI_TO_TCHAR(CaFile.c_str()));
+		// TODO: Implement pw_callback
+		int tlsStatus = connection.tls_set(
+				CaFile.empty() ? NULL : CaFile.c_str(),
+				CaPath.empty() ? NULL : CaPath.c_str(),
+				CertFile.empty() ? NULL : CertFile.c_str(),
+				KeyFile.empty() ? NULL : KeyFile.c_str(),
+				NULL);
+		if (tlsStatus != MOSQ_ERR_SUCCESS)
+		{
+			UE_LOG(LogTemp, Error, TEXT("MQTT => TLS error: %d %s"), tlsStatus, ANSI_TO_TCHAR(mosquitto_strerror(tlsStatus)));
+			OnError(tlsStatus, FString(ANSI_TO_TCHAR(mosquitto_strerror(tlsStatus))));
+		}
+	}
+
 	returnCode = connection.connect(Host.c_str(), Port, 10);
 
-	if (returnCode != 0) 
+	if (returnCode != 0)
 	{
 		UE_LOG(LogTemp, Error, TEXT("MQTT => Connection error: %s"), ANSI_TO_TCHAR(mosquitto_strerror(returnCode)));
 		OnError(returnCode, FString(ANSI_TO_TCHAR(mosquitto_strerror(returnCode))));
 		bKeepRunning = false;
 	}
 
-	while (bKeepRunning) 
+	while (bKeepRunning)
 	{
 		TaskQueueLock->Lock();
 
@@ -76,27 +90,30 @@ uint32 FMqttRunnable::Run()
 			{
 				break;
 			}
-			
+
 			FMqttTaskPtr task = TaskQueue->front();
 			TaskQueue->pop();
 
-			switch (task->type) 
+			switch (task->type)
 			{
-				case MqttTaskType::Subscribe: {
-					auto taskSubscribe = StaticCastSharedPtr<FMqttSubscribeTask>(task);
-					returnCode = connection.subscribe(NULL, taskSubscribe->sub, taskSubscribe->qos);
-					break;
-				}
-				case MqttTaskType::Unsubscribe: {
-					auto taskUnsubscribe = StaticCastSharedPtr<FMqttUnsubscribeTask>(task);
-					returnCode = connection.unsubscribe(NULL, taskUnsubscribe->sub);
-					break;
-				}
-				case MqttTaskType::Publish:	{
-					auto taskPublish = StaticCastSharedPtr<FMqttPublishTask>(task);
-					returnCode = connection.publish(NULL, taskPublish->topic, taskPublish->payloadlen, taskPublish->payload, taskPublish->qos, taskPublish->retain);
-					break;
-				}
+			case MqttTaskType::Subscribe:
+			{
+				auto taskSubscribe = StaticCastSharedPtr<FMqttSubscribeTask>(task);
+				returnCode = connection.subscribe(NULL, taskSubscribe->sub, taskSubscribe->qos);
+				break;
+			}
+			case MqttTaskType::Unsubscribe:
+			{
+				auto taskUnsubscribe = StaticCastSharedPtr<FMqttUnsubscribeTask>(task);
+				returnCode = connection.unsubscribe(NULL, taskUnsubscribe->sub);
+				break;
+			}
+			case MqttTaskType::Publish:
+			{
+				auto taskPublish = StaticCastSharedPtr<FMqttPublishTask>(task);
+				returnCode = connection.publish(NULL, taskPublish->topic, taskPublish->payloadlen, taskPublish->payload, taskPublish->qos, taskPublish->retain);
+				break;
+			}
 			}
 
 			if (returnCode != 0)
@@ -114,7 +131,7 @@ uint32 FMqttRunnable::Run()
 		{
 			UE_LOG(LogTemp, Error, TEXT("MQTT => Connection error: %s"), ANSI_TO_TCHAR(mosquitto_strerror(returnCode)));
 
-			if(returnCode == MOSQ_ERR_CONN_REFUSED)
+			if (returnCode == MOSQ_ERR_CONN_REFUSED)
 			{
 				OnError(returnCode, FString(ANSI_TO_TCHAR(mosquitto_strerror(returnCode))));
 				bKeepRunning = false;
@@ -122,20 +139,20 @@ uint32 FMqttRunnable::Run()
 			else
 			{
 				connection.reconnect();
-			}			
+			}
 		}
 	}
 
 	returnCode = connection.disconnect();
-	
-	if (returnCode != 0) 
+
+	if (returnCode != 0)
 	{
 		UE_LOG(LogTemp, Error, TEXT("MQTT => %s"), ANSI_TO_TCHAR(mosquitto_strerror(returnCode)));
 	}
 
 	delete TaskQueue;
 	delete TaskQueueLock;
-	
+
 	TaskQueue = nullptr;
 	TaskQueueLock = nullptr;
 
@@ -155,60 +172,53 @@ bool FMqttRunnable::IsAlive() const
 void FMqttRunnable::PushTask(FMqttTaskPtr task)
 {
 	TaskQueueLock->Lock();
-	
+
 	if (TaskQueue != nullptr)
 	{
 		TaskQueue->push(task);
 	}
-	
+
 	TaskQueueLock->Unlock();
 }
 
 void FMqttRunnable::OnConnect()
 {
-	AsyncTask(ENamedThreads::GameThread, [=]() {
-		client->OnConnectDelegate.ExecuteIfBound();
-	});
+	AsyncTask(ENamedThreads::GameThread, [=]()
+						{ client->OnConnectDelegate.ExecuteIfBound(); });
 }
 
 void FMqttRunnable::OnDisconnect()
 {
-	AsyncTask(ENamedThreads::GameThread, [=]() {
-		client->OnDisconnectDelegate.ExecuteIfBound();
-	});
+	AsyncTask(ENamedThreads::GameThread, [=]()
+						{ client->OnDisconnectDelegate.ExecuteIfBound(); });
 }
 
 void FMqttRunnable::OnPublished(int mid)
 {
-	AsyncTask(ENamedThreads::GameThread, [=]() {
-		client->OnPublishDelegate.ExecuteIfBound(mid);
-	});
+	AsyncTask(ENamedThreads::GameThread, [=]()
+						{ client->OnPublishDelegate.ExecuteIfBound(mid); });
 }
 
 void FMqttRunnable::OnMessage(FMqttMessage message)
 {
-	AsyncTask(ENamedThreads::GameThread, [=]() {
-		client->OnMessageDelegate.ExecuteIfBound(message);
-	});
+	AsyncTask(ENamedThreads::GameThread, [=]()
+						{ client->OnMessageDelegate.ExecuteIfBound(message); });
 }
 
 void FMqttRunnable::OnSubscribe(int mid, const TArray<int> qos)
 {
-	AsyncTask(ENamedThreads::GameThread, [=]() {
-		client->OnSubscribeDelegate.ExecuteIfBound(mid, qos);
-	});
+	AsyncTask(ENamedThreads::GameThread, [=]()
+						{ client->OnSubscribeDelegate.ExecuteIfBound(mid, qos); });
 }
 
 void FMqttRunnable::OnUnsubscribe(int mid)
 {
-	AsyncTask(ENamedThreads::GameThread, [=]() {
-		client->OnUnsubscribeDelegate.ExecuteIfBound(mid);
-	});
+	AsyncTask(ENamedThreads::GameThread, [=]()
+						{ client->OnUnsubscribeDelegate.ExecuteIfBound(mid); });
 }
 
 void FMqttRunnable::OnError(int errCode, FString message)
 {
-	AsyncTask(ENamedThreads::GameThread, [=]() {
-		client->OnErrorDelegate.ExecuteIfBound(errCode, message);
-	});
+	AsyncTask(ENamedThreads::GameThread, [=]()
+						{ client->OnErrorDelegate.ExecuteIfBound(errCode, message); });
 }
