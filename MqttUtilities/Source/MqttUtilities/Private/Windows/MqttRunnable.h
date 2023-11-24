@@ -52,6 +52,7 @@ public:
 	std::string CaPath;
 	std::string CertFile;
 	std::string KeyFile;
+	bool AllowInsecure;
 	
 	int32 Port;
 

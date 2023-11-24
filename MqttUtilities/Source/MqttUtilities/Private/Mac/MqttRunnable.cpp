@@ -64,6 +64,7 @@ uint32 FMqttRunnable::Run()
 				CertFile.empty() ? NULL : CertFile.c_str(),
 				KeyFile.empty() ? NULL : KeyFile.c_str(),
 				NULL);
+		connexion.tls_insecure_set(AllowInsecure);
 		if (tlsStatus != MOSQ_ERR_SUCCESS)
 		{
 			UE_LOG(LogTemp, Error, TEXT("MQTT => TLS error: %d %s"), tlsStatus, ANSI_TO_TCHAR(mosquitto_strerror(tlsStatus)));

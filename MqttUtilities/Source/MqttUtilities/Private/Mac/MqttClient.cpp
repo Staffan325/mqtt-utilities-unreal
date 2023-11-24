@@ -51,6 +51,7 @@ void UMqttClient::Connect(FMqttConnectionData connectionData, const FOnConnectDe
 	Task->CaPath = std::string(TCHAR_TO_ANSI(*connectionData.CaPath));
 	Task->CertFile = std::string(TCHAR_TO_ANSI(*connectionData.CertFile));
 	Task->KeyFile = std::string(TCHAR_TO_ANSI(*connectionData.KeyFile));
+	Task->AllowInsecure = connectionData.allowInsecure;
 
 	Thread = FRunnableThread::Create(Task, TEXT("MQTT-Test"), 0, TPri_Normal, FGenericPlatformAffinity::GetNoAffinityMask());
 }

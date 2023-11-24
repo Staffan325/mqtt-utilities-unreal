@@ -32,4 +32,8 @@ struct MQTTUTILITIES_API FMqttConnectionData
 	/** Path to the PEM encoded private key for this client */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MQTT")
 	FString KeyFile;
+
+	/** Allow insecure SSL connections to server */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MQTT")
+	bool allowInsecure;
 };
